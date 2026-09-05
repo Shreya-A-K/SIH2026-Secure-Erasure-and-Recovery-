@@ -1,0 +1,47 @@
+[
+  {
+    "log_id": 5,
+    "sequence": 5,
+    "event_type": "POST_WIPE_VALIDATION",
+    "summary": "Post-wipe recovery validation: PASS on /dev/sdb",
+    "timestamp": "2026-09-05T06:04:59.803509+00:00",
+    "hash": "342468a7847e7c0de0a78a0c1f0f6820b9d3eed35b3bdcc3247c23c6ff3de12e",
+    "prev_hash": "1fcfae5c16acfd45b8d576161bc952820579beb0755e7b893f15caee6276ad46"
+  },
+  {
+    "log_id": 4,
+    "sequence": 4,
+    "event_type": "VERIFICATION_COMPLETE",
+    "summary": "Verification PASS on /dev/sdb",
+    "timestamp": "2026-09-05T06:04:59.793116+00:00",
+    "hash": "1fcfae5c16acfd45b8d576161bc952820579beb0755e7b893f15caee6276ad46",
+    "prev_hash": "d9bda0ba442ed63dd356ef608807d02af576144fa3c33f049da484d6f4ee6e3c"
+  },
+  {
+    "log_id": 3,
+    "sequence": 3,
+    "event_type": "SANITIZATION_COMPLETE",
+    "summary": "DOD_3_PASS wipe on /dev/sdb \u2014 SUCCESS [OP-20260905-001]",
+    "timestamp": "2026-09-05T06:04:59.770979+00:00",
+    "hash": "d9bda0ba442ed63dd356ef608807d02af576144fa3c33f049da484d6f4ee6e3c",
+    "prev_hash": "2b98c19184fae7abf6e80a65349fe34b42b83dd58ebf89230039a27be8e26715"
+  },
+  {
+    "log_id": 2,
+    "sequence": 2,
+    "event_type": "DEVICE_DETECTED",
+    "summary": "Device detected: SanDisk Ultra 32GB (/dev/sdb)",
+    "timestamp": "2026-09-05T06:04:59.744068+00:00",
+    "hash": "2b98c19184fae7abf6e80a65349fe34b42b83dd58ebf89230039a27be8e26715",
+    "prev_hash": "f8dab4d6eb689bb84b6639fcd2489124422626414513c7573c8205a0612eeb6a"
+  },
+  {
+    "log_id": 1,
+    "sequence": 1,
+    "event_type": "AUTH_EVENT",
+    "summary": "LOGIN_SUCCESS \u2014 john_doe",
+    "timestamp": "2026-09-05T06:04:59.733927+00:00",
+    "hash": "f8dab4d6eb689bb84b6639fcd2489124422626414513c7573c8205a0612eeb6a",
+    "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+]
