@@ -108,9 +108,8 @@ class TestRole4Verification(unittest.TestCase):
             recovered_data=b"\x00" * 26
         )
 
-        self.assertEqual(res["sanitization_status"], "PASSED")
-        self.assertEqual(res["verification_status"], "VERIFIED_SECURE")
-        self.assertIn("audit_logs", res)
+        self.assertEqual(res["status"], "SUCCESS")
+        self.assertTrue(res["verified"])
 
     def test_sanitization_verification_failed_engine(self):
         pre_hash = self.verifier.calculate_sha256(self.sample_file)
@@ -122,8 +121,8 @@ class TestRole4Verification(unittest.TestCase):
             engine_result=engine_result
         )
 
-        self.assertEqual(res["sanitization_status"], "FAILED")
-        self.assertEqual(res["verification_status"], "VERIFICATION_FAILED")
+        self.assertEqual(res["status"], "FAILED")
+        self.assertFalse(res["verified"])
 
     def test_sanitization_already_deleted_file(self):
         pre_hash = self.verifier.calculate_sha256(self.sample_file)
@@ -136,19 +135,19 @@ class TestRole4Verification(unittest.TestCase):
             engine_result=engine_result
         )
 
-        self.assertFalse(res["file_accessible"])
-        self.assertEqual(res["sanitization_status"], "PASSED")
+        self.assertFalse(os.path.exists(self.sample_file))
+        self.assertEqual(res["status"], "SUCCESS")
 
     def test_verify_batch_operation(self):
         batch_items = [
-            {"verification_status": "VERIFIED_SECURE"},
-            {"verification_status": "VERIFIED_SECURE"},
-            {"verification_status": "VERIFICATION_FAILED"}
+            {"path": "file1.txt", "status": "SUCCESS", "verified": True},
+            {"path": "file2.txt", "status": "SUCCESS", "verified": True},
+            {"path": "file3.txt", "status": "FAILED", "verified": False, "error": "Access denied"}
         ]
-        summary = self.verifier.verify_batch(batch_items)
-        self.assertEqual(summary["total_files"], 3)
-        self.assertEqual(summary["verified_passed"], 2)
-        self.assertEqual(summary["verified_failed"], 1)
+        summary = self.verifier.verify_batch("BATCH_PURGE", batch_items)
+        self.assertEqual(summary["total"], 3)
+        self.assertEqual(summary["successful"], 2)
+        self.assertEqual(summary["failed"], 1)
 
 
 if __name__ == "__main__":
