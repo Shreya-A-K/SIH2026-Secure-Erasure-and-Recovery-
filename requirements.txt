@@ -1,0 +1,6 @@
+# Tkinter ships with Python's standard library on most systems (on Linux
+# you may need: sudo apt install python3-tk)
+#
+# Add your own module's dependencies below as you integrate:
+# pytsk3          # Person 5 - forensics/recovery
+# reportlab       # Person 6 - PDF certificate/report generation
