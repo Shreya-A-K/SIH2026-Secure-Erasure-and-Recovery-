@@ -13,7 +13,11 @@ DB every time — this script never deletes anything.
 """
 
 from datetime import datetime, timezone
-from .api import get_trust_layer
+try:
+    from .api import get_trust_layer
+except ImportError:
+    from api import get_trust_layer
+
 
 
 def run():

@@ -74,10 +74,15 @@ class TSKRecovery:
     def __init__(self, device_path: str, out_dir: str):
         if pytsk3 is None:
             raise RecoveryError("pytsk3 is not installed in this environment")
+        if not os.path.exists(device_path) or os.path.getsize(device_path) == 0:
+            raise RecoveryError("Target device/image is empty or missing")
         self.device_path = device_path
         self.out_dir = out_dir
         os.makedirs(out_dir, exist_ok=True)
-        self.img = pytsk3.Img_Info(device_path)
+        try:
+            self.img = pytsk3.Img_Info(device_path)
+        except Exception as e:
+            raise RecoveryError(f"Cannot open image with pytsk3: {e}")
 
     def _open_fs(self, offset_bytes: int = 0) -> "pytsk3.FS_Info":
         try:
@@ -210,6 +215,8 @@ class CarvingRecovery:
             raise RecoveryError(f"'{name}' not found on PATH — check install step")
 
     def run_scalpel(self, config_path: Optional[str] = None) -> List[RecoveredFile]:
+        if not os.path.exists(self.device_path) or os.path.getsize(self.device_path) == 0:
+            return []
         self._check_binary("scalpel")
         out_subdir = os.path.join(self.out_dir, "scalpel_out")
         if os.path.exists(out_subdir):
@@ -221,6 +228,8 @@ class CarvingRecovery:
         return self._collect_carved(out_subdir, "scalpel")
 
     def run_foremost(self) -> List[RecoveredFile]:
+        if not os.path.exists(self.device_path) or os.path.getsize(self.device_path) == 0:
+            return []
         self._check_binary("foremost")
         out_subdir = os.path.join(self.out_dir, "foremost_out")
         if os.path.exists(out_subdir):
@@ -259,10 +268,49 @@ class CarvingRecovery:
 # Unified entry point
 # --------------------------------------------------------------------------
 
-def run_full_recovery(device_path: str, out_dir: str,
+def run_full_recovery(device_path, out_dir: Optional[str] = None,
                        use_tsk=True, use_scalpel=True, use_foremost=True,
-                       scalpel_config: Optional[str] = None) -> List[RecoveredFile]:
+                       scalpel_config: Optional[str] = None):
     """Run all requested engines and return a merged, deduped-by-hash list."""
+    if isinstance(device_path, dict):
+        req = device_path
+        dev_path = req.get("device_path", "./test.img")
+        out_d = req.get("output_dir", "./recovered")
+        scan_type = req.get("scan_type", "FULL")
+        is_quick = (scan_type.upper() == "QUICK")
+
+        recovered_files = run_full_recovery(
+            dev_path,
+            out_d,
+            use_tsk=True,
+            use_scalpel=(not is_quick),
+            use_foremost=(not is_quick),
+            scalpel_config=scalpel_config,
+        )
+
+        try:
+            from confidence_score import score_batch
+        except ImportError:
+            from person5_final.confidence_score import score_batch
+
+        scored = score_batch(recovered_files)
+        files = [
+            {
+                "name": item.get("name", "artifact"),
+                "method": item.get("method", "carving"),
+                "size": item.get("recovered_size", 0),
+                "confidence_score": item.get("score", 0),
+                "confidence_label": item.get("label", "LOW"),
+            }
+            for item in scored
+        ]
+        return {
+            "status": "SUCCESS",
+            "files_found": len(files),
+            "files": files,
+        }
+
+    out_dir = out_dir or "./recovered"
     all_results: List[RecoveredFile] = []
 
     if use_tsk:

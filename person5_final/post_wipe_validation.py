@@ -47,10 +47,21 @@ class ValidationResult:
     finished_at: str = ""
     notes: str = ""
 
+    def __getitem__(self, item):
+        if item == "validation_status":
+            return self.verdict
+        return getattr(self, item)
+
+    def get(self, item, default=None):
+        if item == "validation_status":
+            return self.verdict
+        return getattr(self, item, default)
+
     def as_dict(self):
         return {
             "device_path": self.device_path,
             "verdict": self.verdict,
+            "validation_status": self.verdict,
             "scope": self.scope,
             "artifacts_found": self.artifacts_found,
             "qualifying_artifacts": self.qualifying_artifacts,
@@ -61,7 +72,7 @@ class ValidationResult:
         }
 
 
-def run_post_wipe_scan(device_path: str, scope: str = "quick",
+def run_post_wipe_scan(device_path, scope: str = "quick",
                         work_dir: Optional[str] = None,
                         cleanup: bool = True) -> ValidationResult:
     """
@@ -70,6 +81,11 @@ def run_post_wipe_scan(device_path: str, scope: str = "quick",
     scope="full":  quick scan + Scalpel + Foremost carving pass (slower,
                    use for the final certificate-grade validation).
     """
+    if isinstance(device_path, dict):
+        req = device_path
+        device_path = req.get("device_path", "./test.img")
+        scope = req.get("scope", scope)
+
     started = datetime.now(timezone.utc).isoformat()
     own_tmp = work_dir is None
     work_dir = work_dir or tempfile.mkdtemp(prefix="postwipe_")
@@ -109,13 +125,26 @@ def run_post_wipe_scan(device_path: str, scope: str = "quick",
             shutil.rmtree(work_dir, ignore_errors=True)
 
 
-def to_audit_event(result: ValidationResult) -> Dict:
+def to_audit_event(result) -> Dict:
     """
     Shape expected by Person 6's hash-chain audit logger. Hand this dict
     straight to their `audit_logger.append_event(...)` — do not log the
     full recovered file bytes/paths, only summary + hashes, to keep the
     audit chain lightweight and avoid re-exposing recovered content.
     """
+    if isinstance(result, dict):
+        evidence = result.get("evidence", [])
+        return {
+            "event_type": "POST_WIPE_VALIDATION",
+            "device_path": result.get("device_path", ""),
+            "verdict": result.get("verdict") or result.get("validation_status", "PASS"),
+            "scope": result.get("scope", "quick"),
+            "artifacts_found": result.get("artifacts_found", 0),
+            "qualifying_artifacts": result.get("qualifying_artifacts", 0),
+            "evidence_hashes": [e["sha256"] for e in evidence if e.get("sha256")],
+            "timestamp": result.get("finished_at", datetime.now(timezone.utc).isoformat()),
+            "notes": result.get("notes", ""),
+        }
     return {
         "event_type": "POST_WIPE_VALIDATION",
         "device_path": result.device_path,

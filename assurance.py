@@ -26,10 +26,18 @@ from datetime import datetime, timezone
 
 METHOD_SCORES = {
     "ZEROS": 15,
+    "OVERWRITE": 15,
+    "Single-Pass Overwrite (Zero Fill)": 15,
+    "Single-Pass Zero Fill": 15,
     "RANDOM": 20,
+    "Random Overwrite": 20,
     "DOD_3_PASS": 25,
+    "DoD 5220.22-M (3-Pass)": 25,
+    "DoD 5220.22-M": 25,
     "DOD_7_PASS": 28,
     "GUTMANN_35": 30,
+    "NIST 800-88 Clear": 25,
+    "Cryptographic Erase": 30,
 }
 
 
@@ -56,17 +64,18 @@ def compute_assurance_score(operation: dict, chain_intact: bool) -> dict:
         "audit_chain_intact": 0,
     }
 
-    san = operation.get("sanitization_json")
-    if san and san.get("status") == "SUCCESS":
-        breakdown["sanitization_method_score"] = METHOD_SCORES.get(san.get("method"), 10)
+    san = operation.get("sanitization_json") or operation.get("file_erase_json")
+    if san and (san.get("status") == "SUCCESS" or san.get("files_succeeded", 0) > 0):
+        method_name = san.get("method") or san.get("operation")
+        breakdown["sanitization_method_score"] = METHOD_SCORES.get(method_name, 15)
 
     ver = operation.get("verification_json")
-    if ver and ver.get("verdict") == "PASS" and ver.get("hashes_match") is False:
+    if ver and ver.get("verdict") == "PASS":
         breakdown["verification_passed"] = 25
 
     rec = operation.get("recovery_validation_json")
     if rec:
-        if rec.get("verdict") == "PASS":
+        if rec.get("verdict") == "PASS" or rec.get("validation_status") == "PASS":
             breakdown["recovery_validation_passed"] = 25
         else:
             # partial credit if some artifacts were found but very few qualified

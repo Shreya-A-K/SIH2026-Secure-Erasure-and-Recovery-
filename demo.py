@@ -7,8 +7,13 @@ Run: python3 -m role6_trust_layer.demo
 
 import os
 from datetime import datetime, timezone
-from . import db
-from .api import TrustLayer
+try:
+    from . import db
+    from .api import TrustLayer
+except ImportError:
+    import db
+    from api import TrustLayer
+
 
 TEST_DB = os.path.join(os.path.dirname(__file__), "demo_trust_layer.db")
 

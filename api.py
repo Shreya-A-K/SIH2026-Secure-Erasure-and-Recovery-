@@ -27,10 +27,17 @@ into the most recent still-open operation for that target.
 import json
 from datetime import datetime, timezone
 
-from . import db
-from . import audit_chain
-from . import assurance
-from . import reports
+try:
+    from . import db
+    from . import audit_chain
+    from . import assurance
+    from . import reports
+except ImportError:
+    import db
+    import audit_chain
+    import assurance
+    import reports
+
 
 
 class TrustLayer:
@@ -121,9 +128,20 @@ class TrustLayer:
 
     def log_sanitization_event(self, event: dict) -> dict:
         target = event["device_path"]
-        op_id = self._open_operation(
-            "SANITIZATION", target, event.get("performed_by_user_id"), event.get("start_time")
-        )
+        op_id = event.get("operation_id")
+        if not op_id:
+            op_id = self._open_operation(
+                "SANITIZATION", target, event.get("performed_by_user_id"), event.get("start_time")
+            )
+        else:
+            cur = self.conn.execute("SELECT * FROM operations WHERE operation_id = ?", (op_id,))
+            if not cur.fetchone():
+                self.conn.execute(
+                    """INSERT INTO operations (operation_id, op_type, target, status, performed_by, start_time)
+                       VALUES (?, ?, ?, 'OPEN', ?, ?)""",
+                    (op_id, "SANITIZATION", target, event.get("performed_by_user_id"), event.get("start_time")),
+                )
+                self.conn.commit()
         self._update_operation_field(op_id, "sanitization_json", event)
         self.conn.execute(
             "UPDATE operations SET end_time = ? WHERE operation_id = ?", (event.get("end_time"), op_id)
@@ -151,8 +169,13 @@ class TrustLayer:
         return entry
 
     def log_verification_event(self, event: dict) -> dict:
-        target = event["target"]
-        op_row = self._find_open_operation_for_target(target)
+        target = event.get("target", "")
+        op_row = None
+        if event.get("operation_id"):
+            cur = self.conn.execute("SELECT * FROM operations WHERE operation_id = ?", (event["operation_id"],))
+            op_row = cur.fetchone()
+        if not op_row and target:
+            op_row = self._find_open_operation_for_target(target)
         if op_row:
             self._update_operation_field(op_row["operation_id"], "verification_json", event)
         summary = f"Verification {event.get('verdict')} on {target}"
@@ -166,8 +189,13 @@ class TrustLayer:
     # ---------------------------------------------------------------
 
     def log_recovery_validation_event(self, event: dict) -> dict:
-        target = event["device_path"]
-        op_row = self._find_open_operation_for_target(target)
+        target = event.get("device_path", "")
+        op_row = None
+        if event.get("operation_id"):
+            cur = self.conn.execute("SELECT * FROM operations WHERE operation_id = ?", (event["operation_id"],))
+            op_row = cur.fetchone()
+        if not op_row and target:
+            op_row = self._find_open_operation_for_target(target)
         if op_row:
             self._update_operation_field(op_row["operation_id"], "recovery_validation_json", event)
             self.conn.execute(
