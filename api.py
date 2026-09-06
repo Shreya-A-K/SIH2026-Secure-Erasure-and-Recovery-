@@ -27,10 +27,10 @@ into the most recent still-open operation for that target.
 import json
 from datetime import datetime, timezone
 
-from . import db
-from . import audit_chain
-from . import assurance
-from . import reports
+import db
+import audit_chain
+import assurance
+import reports
 
 
 class TrustLayer:
